@@ -1,0 +1,970 @@
+-- Primero crear los esquemas necesarios
+CREATE SCHEMA users;
+CREATE SCHEMA store;
+CREATE SCHEMA sale;
+CREATE SCHEMA buys;
+CREATE SCHEMA promotion;
+
+-- Tabla de usuarios (corregido para mantener consistencia)
+CREATE TABLE users.users(
+    id SERIAL,
+    name_user TEXT NOT NULL,
+    password_user TEXT NOT NULL,
+    CONSTRAINT pk_user PRIMARY KEY(id)
+);
+
+-- Tabla de áreas (añadida porque es necesaria)
+CREATE TABLE users.area(
+    id SERIAL,
+    name_area TEXT NOT NULL,
+    description_area TEXT,
+    CONSTRAINT pk_area PRIMARY KEY(id)
+);
+
+-- Tabla de empleados (corregida)
+CREATE TABLE users.employee(
+    id SERIAL,
+    id_user INTEGER NOT NULL,  -- Corregido de id_users a id_user
+    name_employee TEXT NOT NULL,
+    ap_paterno TEXT NULL,
+    ap_materno TEXT NULL,
+    CONSTRAINT pk_employee PRIMARY KEY(id),
+    CONSTRAINT fk_users_user FOREIGN KEY(id_user) REFERENCES users.users(id)
+);
+
+-- Tabla de posiciones
+CREATE TABLE users.position(
+    id SERIAL,
+    name_position TEXT,
+    description_position TEXT,
+    CONSTRAINT pk_position PRIMARY KEY(id)
+);
+
+-- Tabla de contratos (corregida)
+CREATE TABLE users.contract(  -- Corregido el nombre de "contrat" a "contract"
+    id SERIAL,
+    id_employee INTEGER NOT NULL,
+    id_position INTEGER NOT NULL,
+    date_contract DATE DEFAULT CURRENT_TIMESTAMP,
+    type_contract TEXT NOT NULL,
+    time_contract INTEGER,  -- Corregido el nombre de "time_contrat" a "time_contract"
+    CONSTRAINT pk_contract PRIMARY KEY(id),
+    CONSTRAINT fk_employee FOREIGN KEY(id_employee) REFERENCES users.employee(id),
+    CONSTRAINT fk_position FOREIGN KEY(id_position) REFERENCES users.position(id),
+    CONSTRAINT time_valid CHECK (time_contract>0)
+);
+
+-- Tabla de asignación de áreas (corregida)
+CREATE TABLE users.assing_area(
+    id SERIAL,
+    id_employee INTEGER NOT NULL,  -- Corregido de id_users_employee
+    id_area INTEGER NOT NULL,      -- Corregido de id_users_area
+    CONSTRAINT pk_assing_area PRIMARY KEY(id),
+    CONSTRAINT fk_employee FOREIGN KEY(id_employee) REFERENCES users.employee(id),
+    CONSTRAINT fk_area FOREIGN KEY(id_area) REFERENCES users.area(id)
+);
+
+-- Tabla de control de acceso
+CREATE TABLE users.control_access(
+    id SERIAL,
+    id_user INTEGER NOT NULL,
+    admin_control_access TEXT NULL,
+    buys_control_access TEXT NULL,
+    sale_control_access TEXT NULL,
+    store_control_access TEXT NULL,
+    CONSTRAINT pk_control_access PRIMARY KEY(id),
+    CONSTRAINT fk_user FOREIGN KEY(id_user) REFERENCES users.users(id)
+);
+
+-- Tabla de ítems del almacén
+CREATE TABLE store.item(
+    id SERIAL,
+    name_item TEXT NOT NULL,
+    description_item TEXT NOT NULL,
+    CONSTRAINT pk_item PRIMARY KEY(id)
+);
+
+-- Tabla de almacén (corregida)
+CREATE TABLE store.store(
+    id SERIAL,
+    id_user INTEGER NOT NULL,
+    id_item INTEGER NOT NULL,
+    date_store DATE DEFAULT CURRENT_TIMESTAMP,
+    motion CHAR(1) NOT NULL,
+    amount_store INTEGER NULL,
+    final_amount INTEGER NULL,
+    CONSTRAINT pk_store PRIMARY KEY(id),
+    CONSTRAINT fk_user FOREIGN KEY(id_user) REFERENCES users.users(id),
+    CONSTRAINT fk_item FOREIGN KEY(id_item) REFERENCES store.item(id),
+    CONSTRAINT motion_valid CHECK (motion IN ('i', 's')),
+    CONSTRAINT amount_valid CHECK (amount_store>=0)
+);
+
+-- Tabla de clientes
+CREATE TABLE sale.client(
+    id SERIAL,
+    name_client TEXT NOT NULL,
+    CONSTRAINT pk_client PRIMARY KEY(id)
+);
+
+-- Tabla de detalles de venta
+CREATE TABLE sale.sale_detail(
+    id SERIAL,
+    id_item INTEGER NOT NULL,
+    cost_detail INTEGER NOT NULL,
+    amount INTEGER NULL,
+    CONSTRAINT pk_detail PRIMARY KEY(id),
+    CONSTRAINT fk_item FOREIGN KEY(id_item) REFERENCES store.item(id),
+    CONSTRAINT amount_valid CHECK (amount>=0)
+);
+
+-- Tabla de ventas
+CREATE TABLE sale.sale(
+    id SERIAL,
+    id_user INTEGER NOT NULL,
+    id_client INTEGER NOT NULL,
+    id_detail INTEGER NOT NULL,
+    date_sale DATE DEFAULT CURRENT_TIMESTAMP,
+    stock INTEGER NULL,
+    CONSTRAINT pk_sale PRIMARY KEY(id),
+    CONSTRAINT fk_user FOREIGN KEY(id_user) REFERENCES users.users(id),
+    CONSTRAINT fk_client FOREIGN KEY(id_client) REFERENCES sale.client(id),
+    CONSTRAINT fk_detail FOREIGN KEY(id_detail) REFERENCES sale.sale_detail(id),
+    CONSTRAINT stock_valid CHECK (stock>=0)
+);
+
+-- Tabla de proveedores
+CREATE TABLE buys.supplier(  -- Cambiado de buys_supplier a supplier
+    id SERIAL,
+    supplier_name TEXT NOT NULL,
+    company_name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone_number TEXT NOT NULL,  -- Cambiado de number_phone a phone_number
+    CONSTRAINT pk_supplier PRIMARY KEY(id)
+);
+
+-- Tabla de detalles de compra
+CREATE TABLE buys.detail(  -- Cambiado de buys_detail a detail
+    id SERIAL,
+    id_item INTEGER NOT NULL,
+    cost_detail INTEGER NOT NULL,
+    amount_detail INTEGER NULL,
+    CONSTRAINT pk_detail PRIMARY KEY(id),
+    CONSTRAINT fk_item FOREIGN KEY(id_item) REFERENCES store.item(id),
+    CONSTRAINT cost_valid CHECK (cost_detail>=0),
+    CONSTRAINT amount_valid CHECK (amount_detail>=0)
+);
+
+-- Tabla de compras
+CREATE TABLE buys.buy(  -- Cambiado de buys a buy
+    id SERIAL,
+    id_user INTEGER NOT NULL,
+    id_detail INTEGER NOT NULL,
+    id_supplier INTEGER NOT NULL,
+    date_buy DATE DEFAULT CURRENT_TIMESTAMP,  -- Cambiado de date_buys
+    CONSTRAINT pk_buy PRIMARY KEY(id),
+    CONSTRAINT fk_user FOREIGN KEY(id_user) REFERENCES users.users(id),
+    CONSTRAINT fk_detail FOREIGN KEY(id_detail) REFERENCES buys.detail(id),
+    CONSTRAINT fk_supplier FOREIGN KEY(id_supplier) REFERENCES buys.supplier(id)
+);
+
+-- Tabla de promociones
+CREATE TABLE promotion.promotion(
+    id SERIAL,
+    id_item INTEGER NOT NULL,
+    date_promotion DATE DEFAULT CURRENT_TIMESTAMP,
+    amount_promotion INTEGER NULL,
+    discount INTEGER NULL,
+    CONSTRAINT pk_promotion PRIMARY KEY(id),
+    CONSTRAINT fk_item FOREIGN KEY(id_item) REFERENCES store.item(id),
+    CONSTRAINT amount_valid CHECK (amount_promotion>=0),
+    CONSTRAINT discount_valid CHECK (discount>0)
+);
+INSERT INTO users.users (name_user, password_user) VALUES
+-- Primeros 20 usuarios (nombres comunes)
+('Juan Pérez', 'SecurePass123!'),
+('María García', 'M1Password!'),
+('Carlos López', 'ClaveSegura456'),
+('Ana Martínez', 'Ana789*Secure'),
+('Luis Rodríguez', 'LuisR2023!'),
+('Sofía Hernández', 'SofiPass!123'),
+('Miguel González', 'MiguelG*456'),
+('Elena Sánchez', 'ElenaS789!'),
+('Jorge Ramírez', 'JorgeR2023!'),
+('Laura Flores', 'LauraF123*'),
+('Pedro Morales', 'PedroM456!'),
+('Isabel Castro', 'IsabelC789*'),
+('Fernando Romero', 'FerPass2023!'),
+('Adriana Ruiz', 'AdrianaR123!'),
+('Ricardo Mendoza', 'RicardoM456*'),
+('Patricia Vega', 'PatriciaV789!'),
+('Roberto Guzmán', 'RobertoG2023*'),
+('Carmen Ríos', 'CarmenR123!'),
+('José Ortega', 'JoseO456*'),
+('Daniela Silva', 'DanielaS789!'),
+
+-- Siguientes 20 usuarios (nombres internacionales)
+('John Smith', 'JohnS123!'),
+('Emily Johnson', 'EmilyJ456*'),
+('Michael Williams', 'MichaelW789!'),
+('Sarah Brown', 'SarahB2023*'),
+('David Jones', 'DavidJ123!'),
+('Jennifer Davis', 'JenniferD456*'),
+('Christopher Miller', 'ChrisM789!'),
+('Jessica Wilson', 'JessicaW2023*'),
+('Matthew Taylor', 'MatthewT123!'),
+('Amanda Anderson', 'AmandaA456*'),
+('Robert Thomas', 'RobertT789!'),
+('Nicole Jackson', 'NicoleJ2023*'),
+('Daniel White', 'DanielW123!'),
+('Michelle Harris', 'MichelleH456*'),
+('Kevin Martin', 'KevinM789!'),
+('Stephanie Clark', 'StephanieC2023*'),
+('Andrew Lewis', 'AndrewL123!'),
+('Rebecca Walker', 'RebeccaW456*'),
+('Joshua Hall', 'JoshuaH789!'),
+('Lauren Allen', 'LaurenA2023*'),
+
+-- Últimos 20 usuarios (nombres variados)
+('Alejandro Torres', 'AlejandroT123!'),
+('Valeria Navarro', 'ValeriaN456*'),
+('Diego Méndez', 'DiegoM789!'),
+('Camila Vargas', 'CamilaV2023*'),
+('Andrés Herrera', 'AndresH123!'),
+('Gabriela Paredes', 'GabrielaP456*'),
+('Raúl Cordero', 'RaulC789!'),
+('Mariana Solís', 'MarianaS2023*'),
+('Oscar Campos', 'OscarC123!'),
+('Lucía Salazar', 'LuciaS456*'),
+('Hugo Peña', 'HugoP789!'),
+('Ximena Delgado', 'XimenaD2023*'),
+('Arturo Rojas', 'ArturoR123!'),
+('Fernanda Cárdenas', 'FernandaC456*'),
+('Eduardo Núñez', 'EduardoN789!'),
+('Paulina Miranda', 'PaulinaM2023*'),
+('Felipe Espinoza', 'FelipeE123!'),
+('Regina Valdez', 'ReginaV456*'),
+('Gerardo León', 'GerardoL789!'),
+('Daniela Mejía', 'DanielaM2023*');
+INSERT INTO users.area (name_area, description_area) VALUES
+('Administración', 'Área encargada de la gestión administrativa de la empresa'),
+('Ventas', 'Equipo de ventas y atención al cliente'),
+('Almacén', 'Gestión de inventario y logística'),
+('Compras', 'Adquisición de productos y materiales'),
+('Recursos Humanos', 'Gestión del personal y contrataciones'),
+('Marketing', 'Publicidad y promoción de productos'),
+('TI', 'Tecnologías de la Información y soporte técnico'),
+('Contabilidad', 'Gestión financiera y contable'),
+('Gerencia', 'Dirección y toma de decisiones estratégicas'),
+('Producción', 'Fabricación y control de calidad'),
+('Diseño', 'Desarrollo de productos y creatividad'),
+('Servicio al Cliente', 'Atención postventa y soporte a clientes'),
+('Logística', 'Distribución y transporte de productos'),
+('Legal', 'Asesoría jurídica y cumplimiento normativo'),
+('Investigación', 'Desarrollo e innovación de productos'),
+('Exportación', 'Gestión de ventas internacionales'),
+('Importación', 'Gestión de compras internacionales'),
+('Mantenimiento', 'Reparación y conservación de instalaciones'),
+('Calidad', 'Control de estándares de calidad'),
+('Seguridad', 'Protección de instalaciones y personal');
+INSERT INTO users.employee (id_user, name_employee, ap_paterno, ap_materno) VALUES
+(1, 'Juan', 'Pérez', 'Gómez'),
+(2, 'María', 'García', 'López'),
+(3, 'Carlos', 'Martínez', NULL),
+(4, 'Ana', 'Rodríguez', 'Sánchez'),
+(5, 'Luis', 'Hernández', NULL),
+(6, 'Sofía', 'González', 'Ramírez'),
+(7, 'Miguel', 'Sánchez', 'Flores'),
+(8, 'Elena', 'Ramírez', 'Morales'),
+(9, 'Jorge', 'Flores', NULL),
+(10, 'Laura', 'Morales', 'Castro'),
+(11, 'Pedro', 'Castro', 'Romero'),
+(12, 'Isabel', 'Romero', 'Ruiz'),
+(13, 'Fernando', 'Ruiz', 'Mendoza'),
+(14, 'Adriana', 'Mendoza', 'Vega'),
+(15, 'Ricardo', 'Vega', 'Guzmán'),
+(16, 'Patricia', 'Guzmán', 'Ríos'),
+(17, 'Roberto', 'Ríos', 'Ortega'),
+(18, 'Carmen', 'Ortega', 'Silva'),
+(19, 'José', 'Silva', 'Torres'),
+(20, 'Daniela', 'Torres', 'Navarro');
+INSERT INTO users.position (name_position, description_position) VALUES
+('Gerente General', 'Máximo responsable de la empresa'),
+('Jefe de Área', 'Responsable de un departamento específico'),
+('Analista', 'Profesional especializado en análisis de datos'),
+('Asistente', 'Personal de apoyo administrativo'),
+('Vendedor', 'Encargado de ventas y atención al cliente'),
+('Almacenista', 'Gestión de inventario y almacén'),
+('Comprador', 'Responsable de adquisiciones'),
+('Especialista RH', 'Gestión de talento humano'),
+('Diseñador Gráfico', 'Creación de material visual'),
+('Programador', 'Desarrollo de software y sistemas'),
+('Contador', 'Gestión financiera y contable'),
+('Supervisor', 'Encargado de supervisar equipos'),
+('Ejecutivo', 'Profesional especializado'),
+('Técnico', 'Personal con habilidades técnicas'),
+('Auditor', 'Verificación de procesos y cumplimiento'),
+('Coordinador', 'Organización de equipos y proyectos'),
+('Director', 'Responsable de área estratégica'),
+('Consultor', 'Asesor especializado'),
+('Recepcionista', 'Atención inicial al público'),
+('Practicante', 'Personal en formación');
+INSERT INTO users.contract (id_employee, id_position, date_contract, type_contract, time_contract) VALUES
+(1, 1, '2020-01-15', 'Indefinido', 36),
+(2, 2, '2020-03-10', 'Indefinido', 34),
+(3, 3, '2021-05-20', 'Temporal', 12),
+(4, 4, '2021-06-15', 'Indefinido', 32),
+(5, 5, '2021-07-01', 'Indefinido', 32),
+(6, 6, '2021-08-12', 'Temporal', 6),
+(7, 7, '2021-09-05', 'Indefinido', 30),
+(8, 8, '2021-10-18', 'Indefinido', 30),
+(9, 9, '2022-01-07', 'Temporal', 12),
+(10, 10, '2022-02-14', 'Indefinido', 28),
+(11, 11, '2022-03-22', 'Indefinido', 28),
+(12, 12, '2022-04-30', 'Temporal', 6),
+(13, 13, '2022-05-17', 'Indefinido', 26),
+(14, 14, '2022-06-08', 'Indefinido', 26),
+(15, 15, '2022-07-19', 'Temporal', 12),
+(16, 16, '2022-08-25', 'Indefinido', 24),
+(17, 17, '2022-09-14', 'Indefinido', 24),
+(18, 18, '2022-10-03', 'Temporal', 6),
+(19, 19, '2022-11-11', 'Indefinido', 22),
+(20, 20, '2022-12-01', 'Practicas', 3);
+INSERT INTO users.assing_area (id_employee, id_area) VALUES
+(1, 9),   -- Gerente General en Gerencia
+(2, 1),   -- Jefe en Administración
+(3, 7),   -- Analista en TI
+(4, 1),   -- Asistente en Administración
+(5, 2),   -- Vendedor en Ventas
+(6, 3),   -- Almacenista en Almacén
+(7, 4),   -- Comprador en Compras
+(8, 5),   -- Especialista en RH
+(9, 11),  -- Diseñador en Diseño
+(10, 7),  -- Programador en TI
+(11, 8),  -- Contador en Contabilidad
+(12, 2),  -- Supervisor en Ventas
+(13, 4),  -- Ejecutivo en Compras
+(14, 7),  -- Técnico en TI
+(15, 15), -- Auditor en Calidad
+(16, 2),  -- Coordinador en Ventas
+(17, 9),  -- Director en Gerencia
+(18, 5),  -- Consultor en RH
+(19, 1),  -- Recepcionista en Administración
+(20, 11); -- Practicante en Diseño
+INSERT INTO users.control_access (id_user, admin_control_access, buys_control_access, sale_control_access, store_control_access) VALUES
+(1, 'full', 'full', 'full', 'full'),       -- Acceso total (Gerente)
+(2, 'read', 'full', 'read', 'read'),       -- Jefe Administrativo
+(3, 'none', 'none', 'none', 'read'),       -- Analista TI
+(4, 'none', 'none', 'none', 'none'),       -- Asistente
+(5, 'none', 'none', 'full', 'read'),       -- Vendedor
+(6, 'none', 'none', 'none', 'full'),       -- Almacenista
+(7, 'none', 'full', 'none', 'read'),       -- Comprador
+(8, 'read', 'none', 'none', 'none'),       -- RH
+(9, 'none', 'none', 'none', 'none'),       -- Diseñador
+(10, 'none', 'none', 'none', 'read'),      -- Programador
+(11, 'read', 'read', 'none', 'none'),      -- Contador
+(12, 'none', 'none', 'full', 'read'),      -- Supervisor Ventas
+(13, 'none', 'full', 'none', 'read'),      -- Ejecutivo Compras
+(14, 'none', 'none', 'none', 'read'),      -- Técnico
+(15, 'read', 'read', 'read', 'read'),      -- Auditor
+(16, 'none', 'none', 'full', 'read'),      -- Coordinador
+(17, 'full', 'full', 'full', 'full'),      -- Director
+(18, 'none', 'none', 'none', 'none'),      -- Consultor
+(19, 'none', 'none', 'none', 'none'),      -- Recepcionista
+(20, 'none', 'none', 'none', 'none');      -- Practicante
+INSERT INTO store.item (name_item, description_item) VALUES
+-- Alimentos básicos (1-20)
+('Arroz Extra 1kg', 'Arroz grano largo marca Extra'),
+('Aceite Vegetal 900ml', 'Aceite de girasol botella plástico'),
+('Azúcar Refinada 1kg', 'Azúcar blanca refinada'),
+('Harina de Trigo 1kg', 'Harina para repostería'),
+('Leche Entera 1L', 'Leche UHT entera caja'),
+('Huevos Grade A x12', 'Docena de huevos frescos'),
+('Pasta Spaghetti 500g', 'Pasta italiana de trigo duro'),
+('Atún en Lata 170g', 'Atún en agua marca premium'),
+('Frijoles Negros 500g', 'Frijoles secos para cocción'),
+('Café Molido 250g', 'Café 100% colombiano'),
+('Sal de Mesa 1kg', 'Sal refinada yodada'),
+('Consomé en Polvo 100g', 'Sabor pollo, caja con 10 cubos'),
+('Avena Instantánea 400g', 'Avena en hojuelas para preparar'),
+('Mantequilla 250g', 'Mantequilla sin sal en barra'),
+('Mermelada de Fresa 250g', 'Mermelada 100% fruta'),
+('Miel de Abeja 500g', 'Miel natural pura'),
+('Galletas María 400g', 'Galletas clásicas paquete familiar'),
+('Cereal Corn Flakes 500g', 'Cereal de maíz tostado'),
+('Pan Integral Bolsa', 'Pan de molde integral 500g'),
+('Pan Blanco Bolsa', 'Pan de molde blanco 500g'),
+
+-- Lácteos y huevos (21-40)
+('Queso Fresco 200g', 'Queso blanco fresco'),
+('Queso Mozzarella 200g', 'Queso para pizza'),
+('Yogur Natural 1L', 'Yogur sin azúcar añadida'),
+('Yogur de Fresa 1L', 'Yogur sabor fresa'),
+('Crema para Batir 250ml', 'Crema láctea 35% grasa'),
+('Leche Deslactosada 1L', 'Leche sin lactosa'),
+('Leche Light 1L', 'Leche reducida en grasa'),
+('Huevos Orgánicos x12', 'Huevos de gallinas libres'),
+('Mantequilla Light 250g', 'Mantequilla reducida en grasa'),
+('Queso Cheddar 200g', 'Queso amarillo madurado'),
+('Queso Parmesano 100g', 'Queso rallado para pasta'),
+('Leche en Polvo 400g', 'Leche entera en polvo'),
+('Flan Instantáneo 80g', 'Postre sabor vainilla'),
+('Natilla 200g', 'Postre lácteo sabor vainilla'),
+('Yogur Griego 150g', 'Yogur estilo griego natural'),
+('Queso Panela 250g', 'Queso fresco tipo panela'),
+('Leche de Almendras 1L', 'Bebida vegetal de almendras'),
+('Leche de Soya 1L', 'Bebida vegetal de soya'),
+('Queso Cottage 200g', 'Queso fresco bajo en grasa'),
+('Helado Vainilla 1L', 'Helado cremoso sabor vainilla'),
+
+-- Carnes y pescados (41-60)
+('Pechuga de Pollo kg', 'Pechuga de pollo fresca'),
+('Muslos de Pollo kg', 'Muslos con hueso y piel'),
+('Carne Molida Res kg', 'Carne molida de res 80/20'),
+('Filete de Res kg', 'Filete de res para bistec'),
+('Chuleta de Cerdo kg', 'Chuleta de cerdo con hueso'),
+('Salchichas Paquete', 'Salchichas tipo viena 500g'),
+('Jamón de Pavo 200g', 'Jamón de pechuga de pavo'),
+('Tocino 250g', 'Tocino ahumado en rebanadas'),
+('Salmón Fresco kg', 'Filete de salmón fresco'),
+('Atún Fresco kg', 'Filete de atún fresco'),
+('Camarones kg', 'Camarones crudos congelados'),
+('Pulpo kg', 'Pulpo limpio y fresco'),
+('Tilapia kg', 'Filete de tilapia fresca'),
+('Sardinas en Lata 100g', 'Sardinas en aceite vegetal'),
+('Mortadela 200g', 'Mortadela tipo italiano'),
+('Chorizo Paquete', 'Chorizo fresco 500g'),
+('Salchichón 200g', 'Salchichón tipo español'),
+('Jamón Serrano 100g', 'Jamón serrano en paquete'),
+('Carne para Asar kg', 'Carne de res para asar'),
+('Alitas de Pollo kg', 'Alitas de pollo enteras'),
+
+-- Frutas y verduras (61-80)
+('Manzanas Red kg', 'Manzanas rojas por kilo'),
+('Plátanos Maduros kg', 'Plátanos maduros por kilo'),
+('Naranjas kg', 'Naranjas jugosas por kilo'),
+('Limones kg', 'Limones verdes por kilo'),
+('Tomates kg', 'Tomates rojos por kilo'),
+('Cebollas Blancas kg', 'Cebollas blancas por kilo'),
+('Ajos kg', 'Ajos frescos por kilo'),
+('Papa Amarilla kg', 'Papas amarillas por kilo'),
+('Zanahorias kg', 'Zanahorias frescas por kilo'),
+('Lechuga Americana', 'Lechuga fresca por unidad'),
+('Brócoli', 'Brócoli fresco por unidad'),
+('Coliflor', 'Coliflor fresca por unidad'),
+('Espinacas Bolsa', 'Espinacas frescas 250g'),
+('Pimientos Verdes kg', 'Pimientos verdes por kilo'),
+('Champiñones Bolsa', 'Champiñones frescos 200g'),
+('Uvas Verdes kg', 'Uvas verdes sin semillas'),
+('Fresas kg', 'Fresas frescas por kilo'),
+('Sandía Entera', 'Sandía dulce por unidad'),
+('Melón Cantaloupe', 'Melón cantaloupe por unidad'),
+('Piña Entera', 'Piña dulce por unidad'),
+
+-- Bebidas (81-90)
+('Agua Mineral 1L', 'Agua purificada sin gas'),
+('Refresco Cola 2L', 'Refresco de cola familiar'),
+('Jugo de Naranja 1L', 'Jugo 100% natural'),
+('Cerveza Nacional 6pk', 'Six pack de cerveza clara'),
+('Vino Tinto 750ml', 'Vino tinto reserva'),
+('Té en Sobres 25u', 'Té negro caja con 25 sobres'),
+('Café Instantáneo 100g', 'Café soluble en frasco'),
+('Energizante 250ml', 'Bebida energética en lata'),
+('Leche Chocolate 1L', 'Leche sabor chocolate'),
+('Agua Saborizada 500ml', 'Agua con sabor a frutas');
+INSERT INTO store.store (id_user, id_item, date_store, motion, amount_store, final_amount) VALUES
+-- Primeras entradas (1-20)
+(3, 1, '2023-01-02', 'i', 100, 100),
+(3, 2, '2023-01-02', 'i', 80, 80),
+(3, 3, '2023-01-02', 'i', 120, 120),
+(3, 4, '2023-01-02', 'i', 90, 90),
+(3, 5, '2023-01-02', 'i', 150, 150),
+(3, 6, '2023-01-02', 'i', 60, 60),
+(3, 7, '2023-01-02', 'i', 110, 110),
+(3, 8, '2023-01-02', 'i', 200, 200),
+(3, 9, '2023-01-02', 'i', 70, 70),
+(3, 10, '2023-01-02', 'i', 50, 50),
+(3, 11, '2023-01-02', 'i', 180, 180),
+(3, 12, '2023-01-02', 'i', 75, 75),
+(3, 13, '2023-01-02', 'i', 40, 40),
+(3, 14, '2023-01-02', 'i', 65, 65),
+(3, 15, '2023-01-02', 'i', 30, 30),
+(3, 16, '2023-01-02', 'i', 25, 25),
+(3, 17, '2023-01-02', 'i', 15, 15),
+(3, 18, '2023-01-02', 'i', 20, 20),
+(3, 19, '2023-01-02', 'i', 35, 35),
+(3, 20, '2023-01-02', 'i', 45, 45),
+
+-- Segundas entradas (21-40)
+(3, 21, '2023-01-03', 'i', 30, 30),
+(3, 22, '2023-01-03', 'i', 25, 25),
+(3, 23, '2023-01-03', 'i', 40, 40),
+(3, 24, '2023-01-03', 'i', 35, 35),
+(3, 25, '2023-01-03', 'i', 20, 20),
+(3, 26, '2023-01-03', 'i', 15, 15),
+(3, 27, '2023-01-03', 'i', 10, 10),
+(3, 28, '2023-01-03', 'i', 12, 12),
+(3, 29, '2023-01-03', 'i', 18, 18),
+(3, 30, '2023-01-03', 'i', 22, 22),
+(3, 31, '2023-01-03', 'i', 15, 15),
+(3, 32, '2023-01-03', 'i', 20, 20),
+(3, 33, '2023-01-03', 'i', 25, 25),
+(3, 34, '2023-01-03', 'i', 30, 30),
+(3, 35, '2023-01-03', 'i', 18, 18),
+(3, 36, '2023-01-03', 'i', 22, 22),
+(3, 37, '2023-01-03', 'i', 15, 15),
+(3, 38, '2023-01-03', 'i', 20, 20),
+(3, 39, '2023-01-03', 'i', 25, 25),
+(3, 40, '2023-01-03', 'i', 30, 30),
+
+-- Terceras entradas (41-60)
+(3, 41, '2023-01-04', 'i', 15, 15),
+(3, 42, '2023-01-04', 'i', 20, 20),
+(3, 43, '2023-01-04', 'i', 25, 25),
+(3, 44, '2023-01-04', 'i', 12, 12),
+(3, 45, '2023-01-04', 'i', 18, 18),
+(3, 46, '2023-01-04', 'i', 22, 22),
+(3, 47, '2023-01-04', 'i', 15, 15),
+(3, 48, '2023-01-04', 'i', 20, 20),
+(3, 49, '2023-01-04', 'i', 10, 10),
+(3, 50, '2023-01-04', 'i', 8, 8),
+(3, 51, '2023-01-04', 'i', 12, 12),
+(3, 52, '2023-01-04', 'i', 6, 6),
+(3, 53, '2023-01-04', 'i', 10, 10),
+(3, 54, '2023-01-04', 'i', 15, 15),
+(3, 55, '2023-01-04', 'i', 20, 20),
+(3, 56, '2023-01-04', 'i', 12, 12),
+(3, 57, '2023-01-04', 'i', 8, 8),
+(3, 58, '2023-01-04', 'i', 10, 10),
+(3, 59, '2023-01-04', 'i', 15, 15),
+(3, 60, '2023-01-04', 'i', 12, 12),
+
+-- Cuartas entradas (61-80)
+(3, 61, '2023-01-05', 'i', 30, 30),
+(3, 62, '2023-01-05', 'i', 25, 25),
+(3, 63, '2023-01-05', 'i', 20, 20),
+(3, 64, '2023-01-05', 'i', 15, 15),
+(3, 65, '2023-01-05', 'i', 18, 18),
+(3, 66, '2023-01-05', 'i', 22, 22),
+(3, 67, '2023-01-05', 'i', 15, 15),
+(3, 68, '2023-01-05', 'i', 20, 20),
+(3, 69, '2023-01-05', 'i', 25, 25),
+(3, 70, '2023-01-05', 'i', 30, 30),
+(3, 71, '2023-01-05', 'i', 15, 15),
+(3, 72, '2023-01-05', 'i', 20, 20),
+(3, 73, '2023-01-05', 'i', 12, 12),
+(3, 74, '2023-01-05', 'i', 18, 18),
+(3, 75, '2023-01-05', 'i', 22, 22),
+(3, 76, '2023-01-05', 'i', 15, 15),
+(3, 77, '2023-01-05', 'i', 20, 20),
+(3, 78, '2023-01-05', 'i', 25, 25),
+(3, 79, '2023-01-05', 'i', 15, 15),
+(3, 80, '2023-01-05', 'i', 10, 10),
+
+-- Quintas entradas (81-90)
+(3, 81, '2023-01-06', 'i', 50, 50),
+(3, 82, '2023-01-06', 'i', 40, 40),
+(3, 83, '2023-01-06', 'i', 30, 30),
+(3, 84, '2023-01-06', 'i', 20, 20),
+(3, 85, '2023-01-06', 'i', 15, 15),
+(3, 86, '2023-01-06', 'i', 25, 25),
+(3, 87, '2023-01-06', 'i', 30, 30),
+(3, 88, '2023-01-06', 'i', 20, 20),
+(3, 89, '2023-01-06', 'i', 15, 15),
+(3, 90, '2023-01-06', 'i', 10, 10);
+INSERT INTO sale.client (name_client) VALUES
+-- Primeros 20 clientes
+('María González'), ('Carlos Rodríguez'), ('Ana Martínez'), ('Luis Hernández'), ('Sofía López'),
+('Jorge Díaz'), ('Patricia Ramírez'), ('Fernando Cruz'), ('Lucía Mendoza'), ('Ricardo Vargas'),
+('Elena Castro'), ('Oscar Ortega'), ('Adriana Ríos'), ('Pedro Medina'), ('Gabriela Soto'),
+('Raúl Guerrero'), ('Verónica Silva'), ('Arturo Paredes'), ('Claudia Núñez'), ('Daniel Herrera'),
+
+-- Clientes 21-40
+('Alejandro Torres'), ('Valeria Navarro'), ('Diego Méndez'), ('Camila Vargas'), ('Andrés Herrera'),
+('Gabriela Paredes'), ('Raúl Cordero'), ('Mariana Solís'), ('Oscar Campos'), ('Lucía Salazar'),
+('Hugo Peña'), ('Ximena Delgado'), ('Arturo Rojas'), ('Fernanda Cárdenas'), ('Eduardo Núñez'),
+('Paulina Miranda'), ('Felipe Espinoza'), ('Regina Valdez'), ('Gerardo León'), ('Daniela Mejía'),
+
+-- Clientes 41-60
+('Juan Carlos Morales'), ('María José Rivas'), ('José Luis Guzmán'), ('Ana Paula Sánchez'), ('Luis Miguel Fuentes'),
+('Carolina Jiménez'), ('Francisco Méndez'), ('Isabela Cordero'), ('Manuel Álvarez'), ('Diana Patricia Ruiz'),
+('Roberto Carlos Silva'), ('Laura Beatriz Castro'), ('Javier Ernesto Mendoza'), ('Karla Susana Ortega'), ('Miguel Ángel Ponce'),
+('Claudia Elena Ríos'), ('José Antonio Vega'), ('María Fernanda Peña'), ('Ricardo Alonso Soto'), ('Patricia Alejandra Flores'),
+
+-- Clientes 61-80
+('Enrique Martínez'), ('Sara Isabel Gutiérrez'), ('Alberto Rodríguez'), ('Lucía Fernanda Reyes'), ('Guillermo Andrés Castillo'),
+('María Elena Chávez'), ('Jorge Eduardo Blanco'), ('Ana Lucía Medina'), ('Raúl Alejandro Mora'), ('Carmen Rosa Aguirre'),
+('Federico Sánchez'), ('Daniela Alejandra Rojas'), ('Héctor Manuel Delgado'), ('Verónica Elizabeth Paredes'), ('Omar Alejandro Cáceres'),
+('Silvia Patricia Miranda'), ('Gustavo Adolfo Herrera'), ('Natalia Andrea Fuentes'), ('Rodrigo Javier Mendoza'), ('Liliana María Torres'),
+
+-- Clientes 81-90
+('César Augusto López'), ('María Guadalupe García'), ('Fernando José Ramírez'), ('Beatriz Adriana Navarro'), ('Arturo Javier Espinoza'),
+('Rosa María Cervantes'), ('Julián Antonio Ríos'), ('Lorena Elizabeth Vargas'), ('Santiago Manuel Castro'), ('Alejandra Patricia Guzmán');
+INSERT INTO buys.supplier (supplier_name, company_name, email, phone_number) VALUES
+('Juan Pérez', 'Distribuidora Alimentos S.A.', 'jperez@dalimentos.com', '5551002001'),
+('María López', 'Granos y Cereales Ltda.', 'mlopez@gyc.com', '5551002002'),
+('Roberto Sánchez', 'Lácteos Frescos S.A.', 'rsanchez@lacteosfrescos.com', '5551002003'),
+('Laura Ramírez', 'Carnes Premium', 'lramirez@carnespremium.com', '5551002004'),
+('Carlos Jiménez', 'Importadora de Abarrotes', 'cjimenez@importadora.com', '5551002005'),
+('Ana Torres', 'Distribuidora de Limpieza', 'atorres@dlimpieza.com', '5551002006'),
+('Pedro Mendoza', 'Frutas y Verduras Frescas', 'pmendoza@fyv.com', '5551002007'),
+('Sofía Castro', 'Productos Enlatados S.A.', 'scastro@enlatados.com', '5551002008'),
+('Miguel Ángel Ruiz', 'Panadería Industrial', 'maruiz@panindustrial.com', '5551002009'),
+('Elena Morales', 'Bebidas y Refrescos', 'emorales@byr.com', '5551002010');
+INSERT INTO buys.detail (id_item, cost_detail, amount_detail) VALUES
+-- Compras semana 1 (1-30)
+(1, 120, 50), (2, 350, 40), (3, 180, 60), (4, 150, 45), (5, 280, 75),
+(6, 320, 30), (7, 210, 55), (8, 420, 100), (9, 190, 35), (10, 380, 25),
+(11, 160, 90), (12, 290, 40), (13, 230, 20), (14, 310, 35), (15, 270, 15),
+(16, 200, 15), (17, 450, 10), (18, 520, 12), (19, 380, 20), (20, 180, 25),
+(21, 125, 40), (22, 360, 35), (23, 185, 50), (24, 155, 40), (25, 290, 60),
+(26, 330, 25), (27, 220, 45), (28, 430, 80), (29, 195, 30), (30, 390, 20),
+
+-- Compras semana 2 (31-60)
+(31, 120, 50), (32, 350, 40), (33, 180, 60), (34, 150, 45), (35, 280, 75),
+(36, 320, 30), (37, 210, 55), (38, 420, 100), (39, 190, 35), (40, 380, 25),
+(41, 160, 90), (42, 290, 40), (43, 230, 20), (44, 310, 35), (45, 270, 15),
+(46, 200, 15), (47, 450, 10), (48, 520, 12), (49, 380, 20), (50, 180, 25),
+(51, 125, 40), (52, 360, 35), (53, 185, 50), (54, 155, 40), (55, 290, 60),
+(56, 330, 25), (57, 220, 45), (58, 430, 80), (59, 195, 30), (60, 390, 20),
+
+-- Compras semana 3 (61-90)
+(61, 120, 50), (62, 350, 40), (63, 180, 60), (64, 150, 45), (65, 280, 75),
+(66, 320, 30), (67, 210, 55), (68, 420, 100), (69, 190, 35), (70, 380, 25),
+(71, 160, 90), (72, 290, 40), (73, 230, 20), (74, 310, 35), (75, 270, 15),
+(76, 200, 15), (77, 450, 10), (78, 520, 12), (79, 380, 20), (80, 180, 25),
+(81, 125, 40), (82, 360, 35), (83, 185, 50), (84, 155, 40), (85, 290, 60),
+(86, 330, 25), (87, 220, 45), (88, 430, 80), (89, 195, 30), (90, 390, 20);
+INSERT INTO buys.buy (id_user, id_detail, id_supplier, date_buy) VALUES
+-- Compras semana 1 (1-30)
+(4, 1, 1, '2023-01-02'), (4, 2, 1, '2023-01-02'), (4, 3, 1, '2023-01-02'),
+(4, 4, 2, '2023-01-03'), (4, 5, 2, '2023-01-03'), (4, 6, 2, '2023-01-03'),
+(4, 7, 3, '2023-01-04'), (4, 8, 3, '2023-01-04'), (4, 9, 3, '2023-01-04'),
+(4, 10, 4, '2023-01-05'), (4, 11, 4, '2023-01-05'), (4, 12, 4, '2023-01-05'),
+(4, 13, 5, '2023-01-06'), (4, 14, 5, '2023-01-06'), (4, 15, 5, '2023-01-06'),
+(4, 16, 6, '2023-01-07'), (4, 17, 6, '2023-01-07'), (4, 18, 6, '2023-01-07'),
+(4, 19, 7, '2023-01-08'), (4, 20, 7, '2023-01-08'), (4, 21, 7, '2023-01-08'),
+(4, 22, 8, '2023-01-09'), (4, 23, 8, '2023-01-09'), (4, 24, 8, '2023-01-09'),
+(4, 25, 9, '2023-01-10'), (4, 26, 9, '2023-01-10'), (4, 27, 9, '2023-01-10'),
+(4, 28, 10, '2023-01-11'), (4, 29, 10, '2023-01-11'), (4, 30, 10, '2023-01-11'),
+
+-- Compras semana 2 (31-60)
+(4, 31, 1, '2023-01-16'), (4, 32, 1, '2023-01-16'), (4, 33, 1, '2023-01-16'),
+(4, 34, 2, '2023-01-17'), (4, 35, 2, '2023-01-17'), (4, 36, 2, '2023-01-17'),
+(4, 37, 3, '2023-01-18'), (4, 38, 3, '2023-01-18'), (4, 39, 3, '2023-01-18'),
+(4, 40, 4, '2023-01-19'), (4, 41, 4, '2023-01-19'), (4, 42, 4, '2023-01-19'),
+(4, 43, 5, '2023-01-20'), (4, 44, 5, '2023-01-20'), (4, 45, 5, '2023-01-20'),
+(4, 46, 6, '2023-01-21'), (4, 47, 6, '2023-01-21'), (4, 48, 6, '2023-01-21'),
+(4, 49, 7, '2023-01-22'), (4, 50, 7, '2023-01-22'), (4, 51, 7, '2023-01-22'),
+(4, 52, 8, '2023-01-23'), (4, 53, 8, '2023-01-23'), (4, 54, 8, '2023-01-23'),
+(4, 55, 9, '2023-01-24'), (4, 56, 9, '2023-01-24'), (4, 57, 9, '2023-01-24'),
+(4, 58, 10, '2023-01-25'), (4, 59, 10, '2023-01-25'), (4, 60, 10, '2023-01-25'),
+
+-- Compras semana 3 (61-90)
+(4, 61, 1, '2023-02-01'), (4, 62, 1, '2023-02-01'), (4, 63, 1, '2023-02-01'),
+(4, 64, 2, '2023-02-02'), (4, 65, 2, '2023-02-02'), (4, 66, 2, '2023-02-02'),
+(4, 67, 3, '2023-02-03'), (4, 68, 3, '2023-02-03'), (4, 69, 3, '2023-02-03'),
+(4, 70, 4, '2023-02-04'), (4, 71, 4, '2023-02-04'), (4, 72, 4, '2023-02-04'),
+(4, 73, 5, '2023-02-05'), (4, 74, 5, '2023-02-05'), (4, 75, 5, '2023-02-05'),
+(4, 76, 6, '2023-02-06'), (4, 77, 6, '2023-02-06'), (4, 78, 6, '2023-02-06'),
+(4, 79, 7, '2023-02-07'), (4, 80, 7, '2023-02-07'), (4, 81, 7, '2023-02-07'),
+(4, 82, 8, '2023-02-08'), (4, 83, 8, '2023-02-08'), (4, 84, 8, '2023-02-08'),
+(4, 85, 9, '2023-02-09'), (4, 86, 9, '2023-02-09'), (4, 87, 9, '2023-02-09'),
+(4, 88, 10, '2023-02-10'), (4, 89, 10, '2023-02-10'), (4, 90, 10, '2023-02-10');
+INSERT INTO sale.sale_detail (id_item, cost_detail, amount) VALUES
+-- Ventas semana 1 (1-30)
+(1, 150, 2), (2, 450, 1), (3, 220, 3), (4, 180, 2), (5, 350, 1),
+(6, 400, 1), (7, 250, 2), (8, 500, 3), (9, 230, 1), (10, 450, 1),
+(11, 200, 2), (12, 350, 1), (13, 280, 1), (14, 380, 1), (15, 320, 2),
+(16, 250, 1), (17, 550, 1), (18, 600, 1), (19, 450, 1), (20, 220, 2),
+(21, 160, 3), (22, 470, 1), (23, 240, 2), (24, 200, 1), (25, 370, 2),
+(26, 420, 1), (27, 270, 1), (28, 520, 2), (29, 250, 1), (30, 480, 1),
+
+-- Ventas semana 2 (31-60)
+(31, 150, 2), (32, 450, 1), (33, 220, 3), (34, 180, 2), (35, 350, 1),
+(36, 400, 1), (37, 250, 2), (38, 500, 3), (39, 230, 1), (40, 450, 1),
+(41, 200, 2), (42, 350, 1), (43, 280, 1), (44, 380, 1), (45, 320, 2),
+(46, 250, 1), (47, 550, 1), (48, 600, 1), (49, 450, 1), (50, 220, 2),
+(51, 160, 3), (52, 470, 1), (53, 240, 2), (54, 200, 1), (55, 370, 2),
+(56, 420, 1), (57, 270, 1), (58, 520, 2), (59, 250, 1), (60, 480, 1),
+
+-- Ventas semana 3 (61-90)
+(61, 150, 2), (62, 450, 1), (63, 220, 3), (64, 180, 2), (65, 350, 1),
+(66, 400, 1), (67, 250, 2), (68, 500, 3), (69, 230, 1), (70, 450, 1),
+(71, 200, 2), (72, 350, 1), (73, 280, 1), (74, 380, 1), (75, 320, 2),
+(76, 250, 1), (77, 550, 1), (78, 600, 1), (79, 450, 1), (80, 220, 2),
+(81, 160, 3), (82, 470, 1), (83, 240, 2), (84, 200, 1), (85, 370, 2),
+(86, 420, 1), (87, 270, 1), (88, 520, 2), (89, 250, 1), (90, 480, 1);
+INSERT INTO sale.sale (id_user, id_client, id_detail, date_sale, stock) VALUES
+-- Semana 1 (1-30)
+(5, 1, 1, '2023-01-02', 98), (5, 2, 2, '2023-01-02', 79), (5, 3, 3, '2023-01-02', 117),
+(5, 4, 4, '2023-01-03', 88), (5, 5, 5, '2023-01-03', 149), (5, 6, 6, '2023-01-03', 59),
+(5, 7, 7, '2023-01-04', 108), (5, 8, 8, '2023-01-04', 197), (5, 9, 9, '2023-01-04', 69),
+(5, 10, 10, '2023-01-05', 49), (5, 11, 11, '2023-01-05', 178), (5, 12, 12, '2023-01-05', 74),
+(5, 13, 13, '2023-01-06', 39), (5, 14, 14, '2023-01-06', 64), (5, 15, 15, '2023-01-06', 28),
+(5, 16, 16, '2023-01-07', 24), (5, 17, 17, '2023-01-07', 14), (5, 18, 18, '2023-01-07', 19),
+(5, 19, 19, '2023-01-08', 34), (5, 20, 20, '2023-01-08', 43), (5, 21, 21, '2023-01-08', 95),
+(5, 22, 22, '2023-01-09', 78), (5, 23, 23, '2023-01-09', 115), (5, 24, 24, '2023-01-09', 87),
+(5, 25, 25, '2023-01-10', 58), (5, 26, 26, '2023-01-10', 24), (5, 27, 27, '2023-01-10', 44),
+(5, 28, 28, '2023-01-11', 78), (5, 29, 29, '2023-01-11', 29), (5, 30, 30, '2023-01-11', 19),
+
+-- Semana 2 (31-60)
+(5, 31, 31, '2023-01-16', 98), (5, 32, 32, '2023-01-16', 79), (5, 33, 33, '2023-01-16', 117),
+(5, 34, 34, '2023-01-17', 88), (5, 35, 35, '2023-01-17', 149), (5, 36, 36, '2023-01-17', 59),
+(5, 37, 37, '2023-01-18', 108), (5, 38, 38, '2023-01-18', 197), (5, 39, 39, '2023-01-18', 69),
+(5, 40, 40, '2023-01-19', 49), (5, 41, 41, '2023-01-19', 178), (5, 42, 42, '2023-01-19', 74),
+(5, 43, 43, '2023-01-20', 39), (5, 44, 44, '2023-01-20', 64), (5, 45, 45, '2023-01-20', 28),
+(5, 46, 46, '2023-01-21', 24), (5, 47, 47, '2023-01-21', 14), (5, 48, 48, '2023-01-21', 19),
+(5, 49, 49, '2023-01-22', 34), (5, 50, 50, '2023-01-22', 43), (5, 51, 51, '2023-01-22', 95),
+(5, 52, 52, '2023-01-23', 78), (5, 53, 53, '2023-01-23', 115), (5, 54, 54, '2023-01-23', 87),
+(5, 55, 55, '2023-01-24', 58), (5, 56, 56, '2023-01-24', 24), (5, 57, 57, '2023-01-24', 44),
+(5, 58, 58, '2023-01-25', 78), (5, 59, 59, '2023-01-25', 29), (5, 60, 60, '2023-01-25', 19),
+
+-- Semana 3 (61-90)
+(5, 61, 61, '2023-02-01', 98), (5, 62, 62, '2023-02-01', 79), (5, 63, 63, '2023-02-01', 117),
+(5, 64, 64, '2023-02-02', 88), (5, 65, 65, '2023-02-02', 149), (5, 66, 66, '2023-02-02', 59),
+(5, 67, 67, '2023-02-03', 108), (5, 68, 68, '2023-02-03', 197), (5, 69, 69, '2023-02-03', 69),
+(5, 70, 70, '2023-02-04', 49), (5, 71, 71, '2023-02-04', 178), (5, 72, 72, '2023-02-04', 74),
+(5, 73, 73, '2023-02-05', 39), (5, 74, 74, '2023-02-05', 64), (5, 75, 75, '2023-02-05', 28),
+(5, 76, 76, '2023-02-06', 24), (5, 77, 77, '2023-02-06', 14), (5, 78, 78, '2023-02-06', 19),
+(5, 79, 79, '2023-02-07', 34), (5, 80, 80, '2023-02-07', 43), (5, 81, 81, '2023-02-07', 95),
+(5, 82, 82, '2023-02-08', 78), (5, 83, 83, '2023-02-08', 115), (5, 84, 84, '2023-02-08', 87),
+(5, 85, 85, '2023-02-09', 58), (5, 86, 86, '2023-02-09', 24), (5, 87, 87, '2023-02-09', 44),
+(5, 88, 88, '2023-02-10', 78), (5, 89, 89, '2023-02-10', 29), (5, 90, 90, '2023-02-10', 19);
+INSERT INTO promotion.promotion (id_item, date_promotion, amount_promotion, discount) VALUES
+(1, '2023-01-20', 50, 10),   -- 10% descuento en arroz
+(5, '2023-01-20', 100, 15),   -- 15% descuento en leche
+(8, '2023-01-20', 150, 20),   -- 20% descuento en atún
+(11, '2023-01-25', 80, 10),   -- 10% descuento en galletas
+(14, '2023-01-25', 40, 25),   -- 25% descuento en detergente
+(16, '2023-02-01', 20, 30),   -- 30% descuento en plátanos
+(18, '2023-02-01', 15, 15),   -- 15% descuento en carne molida
+(19, '2023-02-01', 30, 10),   -- 10% descuento en queso
+(3, '2023-02-05', 60, 20),    -- 20% descuento en azúcar
+(7, '2023-02-05', 80, 15);    -- 15% descuento en pasta
+SELECT * FROM promotion.promotion;
+--1.-¿que prociones a tenido un producto x?
+SELECT 
+    i.name_item AS producto,
+    p.date_promotion AS fecha_promocion,
+    p.discount || '%' AS descuento,
+    i2.cost_detail AS precio_regular,
+    ROUND((i2.cost_detail * (1 - p.discount/100.0)), 2) AS precio_promocion
+FROM 
+    promotion.promotion p
+JOIN 
+    store.item i ON p.id_item = i.id
+JOIN 
+    buys.detail i2 ON p.id_item = i2.id_item
+WHERE 
+    LOWER(i.name_item) LIKE LOWER('%arroz%')
+ORDER BY 
+    p.date_promotion DESC;
+--2.-mostrar las ventas realizadas por un usuario x
+--Ejemplo concreto (para el usuario con ID=5):
+SELECT 
+    s.id AS venta_id,
+    u.name_user AS vendedor,
+    s.date_sale AS fecha,
+    c.name_client AS cliente,
+    i.name_item AS producto,
+    sd.amount AS cantidad,
+    CONCAT('$', sd.cost_detail) AS precio_unitario,
+    CONCAT('$', (sd.amount * sd.cost_detail)) AS total,
+    CONCAT('Quedan: ', s.stock) AS inventario_restante
+FROM 
+    sale.sale s
+JOIN 
+    users.users u ON s.id_user = u.id
+JOIN 
+    sale.client c ON s.id_client = c.id
+JOIN 
+    sale.sale_detail sd ON s.id_detail = sd.id
+JOIN 
+    store.item i ON sd.id_item = i.id
+WHERE 
+    u.id = 5  
+ORDER BY 
+    s.date_sale DESC;
+--3.-mostrar la lista de en un cargo x
+--Ejemplo cargo de vendedor:
+SELECT 
+    e.id AS id_empleado,
+    e.name_employee AS nombre,
+    e.ap_paterno AS apellido_paterno,
+    e.ap_materno AS apellido_materno,
+    p.name_position AS cargo_actual,
+    c.date_contract AS fecha_inicio,
+    CASE 
+        WHEN c.type_contract = 'Indefinido' THEN 'Permanente'
+        ELSE CONCAT('Temporal (', c.time_contract, ' meses)')
+    END AS estatus_contrato
+FROM 
+    users.employee e
+JOIN 
+    users.contract c ON e.id = c.id_employee
+JOIN 
+    users.position p ON c.id_position = p.id
+WHERE 
+    LOWER(p.name_position) LIKE LOWER('%vendedor%')
+ORDER BY 
+    e.name_employee;
+--4.-mostar una lista de empleados que alla realizado una compra y saber el cargo:
+SELECT 
+    e.name_employee AS empleado,
+    p.name_position AS cargo,
+    b.id AS id_compra,
+    b.date_buy AS fecha_compra,
+    s.supplier_name AS proveedor,
+    i.name_item AS producto,
+    d.amount_detail AS cantidad,
+    d.cost_detail AS precio_unitario,
+    (d.amount_detail * d.cost_detail) AS total_compra
+FROM 
+    buys.buy b
+JOIN 
+    users.users u ON b.id_user = u.id
+JOIN 
+    users.employee e ON u.id = e.id_user
+JOIN 
+    users.contract c ON e.id = c.id_employee
+JOIN 
+    users.position p ON c.id_position = p.id
+JOIN 
+    buys.detail d ON b.id_detail = d.id
+JOIN 
+    buys.supplier s ON b.id_supplier = s.id
+JOIN 
+    store.item i ON d.id_item = i.id
+ORDER BY 
+    b.date_buy DESC, e.name_employee;
+--5.-saber cuanto queda de un producto x
+SELECT 
+    i.name_item AS producto,
+    s.final_amount AS unidades_disponibles,
+    TO_CHAR(s.date_store, 'DD/MM/YYYY') AS ultima_actualizacion
+FROM 
+    store.store s
+JOIN 
+    store.item i ON s.id_item = i.id
+WHERE 
+    LOWER(i.name_item) LIKE LOWER('%arroz%')
+ORDER BY 
+    s.date_store DESC
+LIMIT 1;
+--6.-mostrar la lista de proveedores que venden un producto x
+SELECT
+    s.supplier_name AS proveedor,
+    s.company_name AS empresa,
+    i.name_item AS producto,
+    COUNT(b.id) AS veces_comprado,
+    MIN(d.cost_detail) AS menor_precio,
+    MAX(d.cost_detail) AS mayor_precio,
+    ROUND(AVG(d.cost_detail), 2) AS precio_promedio
+FROM
+    buys.supplier s
+JOIN
+    buys.buy b ON s.id = b.id_supplier
+JOIN
+    buys.detail d ON b.id_detail = d.id
+JOIN
+    store.item i ON d.id_item = i.id
+WHERE
+    LOWER(i.name_item) LIKE LOWER('%arroz%')
+GROUP BY
+    s.supplier_name, s.company_name, i.name_item
+ORDER BY
+    veces_comprado DESC;
+--Preguntas avazandas 
+--1.- saber cuanto hacido el ingreso por ventas realizadas por un mes x
+SELECT 
+    TO_CHAR(s.date_sale, 'YYYY-MM') AS mes_año,
+    COUNT(DISTINCT s.id) AS cantidad_ventas,
+    SUM(sd.amount * sd.cost_detail) AS ingresos_totales,
+    ROUND(SUM(sd.amount * sd.cost_detail) / COUNT(DISTINCT s.id), 2) AS ticket_promedio,
+    (SELECT COUNT(DISTINCT id_client) FROM sale.sale 
+     WHERE EXTRACT(MONTH FROM date_sale) = 1 AND EXTRACT(YEAR FROM date_sale) = 2023) AS clientes_unicos
+FROM 
+    sale.sale s
+JOIN 
+    sale.sale_detail sd ON s.id_detail = sd.id
+WHERE 
+    EXTRACT(MONTH FROM s.date_sale) = 1  -- Enero
+    AND EXTRACT(YEAR FROM s.date_sale) = 2023
+GROUP BY 
+    TO_CHAR(s.date_sale, 'YYYY-MM');
+--2.-conocer el producto mas vendido
+SELECT 
+    i.id AS id_producto,
+    i.name_item AS producto,
+    SUM(sd.amount) AS total_vendido,
+    SUM(sd.amount * sd.cost_detail) AS ingresos_generados
+FROM 
+    sale.sale_detail sd
+JOIN 
+    store.item i ON sd.id_item = i.id
+GROUP BY 
+    i.id, i.name_item
+ORDER BY 
+    total_vendido DESC
+LIMIT 1;
+--3.- conocer al cliente que más productos ha comprado
+SELECT 
+    c.id AS id_cliente,
+    c.name_client AS cliente,
+    COUNT(s.id) AS total_compras,
+    SUM(sd.amount) AS total_productos_comprados,
+    SUM(sd.amount * sd.cost_detail) AS monto_total_gastado
+FROM 
+    sale.client c
+JOIN 
+    sale.sale s ON c.id = s.id_client
+JOIN 
+    sale.sale_detail sd ON s.id_detail = sd.id
+GROUP BY 
+    c.id, c.name_client
+ORDER BY 
+    total_productos_comprados DESC
+LIMIT 1;
+--4.-Conocer al cliente  con el costo más alto de compra
+SELECT 
+    c.id AS id_cliente,
+    c.name_client AS cliente,
+    SUM(sd.amount * sd.cost_detail) AS gasto_total,
+    COUNT(DISTINCT s.id) AS cantidad_compras,
+    ROUND(SUM(sd.amount * sd.cost_detail) / COUNT(DISTINCT s.id), 2) AS ticket_promedio
+FROM 
+    sale.client c
+JOIN 
+    sale.sale s ON c.id = s.id_client
+JOIN 
+    sale.sale_detail sd ON s.id_detail = sd.id
+GROUP BY 
+    c.id, c.name_client
+ORDER BY 
+    gasto_total DESC
+LIMIT 1;
+--5.-mostrar la cantidad de clientes que se tiene
+SELECT 
+    COUNT(*) AS total_clientes,
+    MIN(date_sale) AS fecha_primer_cliente,
+    MAX(date_sale) AS fecha_ultimo_cliente
+FROM 
+    sale.client c
+LEFT JOIN 
+    sale.sale s ON c.id = s.id_client;
+--6.-mostrar los productos con un stock menor a 10
+SELECT 
+    i.id AS id_producto,
+    i.name_item AS producto,
+    i.description_item AS descripcion,
+    s.final_amount AS stock_actual,
+    TO_CHAR(s.date_store, 'DD/MM/YYYY') AS ultima_actualizacion
+FROM 
+    store.store s
+JOIN 
+    store.item i ON s.id_item = i.id
+WHERE 
+    s.final_amount < 10
+ORDER BY 
+    s.final_amount ASC;

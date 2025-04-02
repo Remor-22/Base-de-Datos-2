@@ -1,0 +1,48 @@
+-- 1. Promociones de un producto
+CREATE INDEX idx_promotion_item ON promotion.promotion(id_item);
+CREATE INDEX idx_item_name ON store.item(LOWER(name_item));
+
+-- 2. Ventas por usuario
+CREATE INDEX idx_sale_user ON sale.sale(id_user);
+CREATE INDEX idx_sale_date ON sale.sale(date_sale);
+
+-- 3. Empleados por cargo
+CREATE INDEX idx_position_name ON users.position(LOWER(name_position));
+CREATE INDEX idx_contract_position ON users.contract(id_position);
+
+-- 4. Empleados que realizaron compras
+CREATE INDEX idx_buy_user ON buys.buy(id_user);
+CREATE INDEX idx_buy_date ON buys.buy(date_buy);
+CREATE INDEX idx_detail_item ON buys.detail(id_item);
+
+-- 5. Stock de producto
+CREATE INDEX idx_store_item ON store.store(id_item);
+CREATE INDEX idx_store_final_amount ON store.store(final_amount);
+
+-- 6. Proveedores de un producto
+CREATE INDEX idx_detail_item ON buys.detail(id_item);
+CREATE INDEX idx_buy_supplier ON buys.buy(id_supplier);
+--
+-- 1. Ingresos por ventas mensuales
+CREATE INDEX idx_sale_date_month ON sale.sale(EXTRACT(MONTH FROM date_sale), EXTRACT(YEAR FROM date_sale));
+CREATE INDEX idx_sale_detail_amount_cost ON sale.sale_detail(amount, cost_detail);
+
+-- 2. Producto más vendido
+CREATE INDEX idx_sale_detail_item ON sale.sale_detail(id_item);
+CREATE INDEX idx_sale_detail_amount ON sale.sale_detail(amount);
+
+-- 3. Cliente con más productos comprados
+CREATE INDEX idx_sale_client ON sale.sale(id_client);
+CREATE INDEX idx_sale_detail_amount ON sale.sale_detail(amount);
+
+-- 4. Cliente con mayor gasto
+CREATE INDEX idx_sale_client_total ON sale.sale(id_client);
+CREATE INDEX idx_sale_detail_total_cost ON sale.sale_detail((amount * cost_detail));
+
+-- 5. Cantidad de clientes
+CREATE INDEX idx_client_id ON sale.client(id);
+CREATE INDEX idx_sale_client_date ON sale.sale(id_client, date_sale);
+
+-- 6. Productos con stock bajo
+CREATE INDEX idx_store_low_stock ON store.store(final_amount) WHERE final_amount < 10;
+CREATE INDEX idx_item_id_name ON store.item(id, name_item);
